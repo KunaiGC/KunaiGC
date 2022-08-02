@@ -20,7 +20,7 @@ extern void dol_alloc(int size);
 
 void kunai_sector_erase(uint32_t addr);
 int kunai_load_payload(u32 addr, size_t size);
-static inline void kunai_disable_passthrough(void);
+void kunai_disable_passthrough(void);
 void kunai_enable_passthrough(void);
 uint16_t kunai_get_deviceid(void);
 uint32_t kunai_read_32bit(uint32_t addr);

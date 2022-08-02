@@ -191,11 +191,6 @@ void writeLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int color) {
   }
 }
 
-long map(long x, long in_min, long in_max, long out_min, long out_max)
-{
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
 /**************************************************************************/
 /*!
    @brief    Write a pixel, overwrite in subclasses if startWrite is defined!
@@ -204,24 +199,13 @@ long map(long x, long in_min, long in_max, long out_min, long out_max)
    @param    color 32-bit Y1CbY2Cr
 */
 /**************************************************************************/
-void writePixel(int16_t x, int16_t y, int color) {
-	int val_x = map(x, 0, 640, 0, rmode->fbWidth/2);
+void writePixel(int16_t x, int16_t y, u32 color) {
 	u32 *tmpfb = (u32 *) __xfb;
-	tmpfb[val_x + ((rmode->fbWidth/2) * y)] = color;
+	u32 offset = (x/2) + ((rmode->fbWidth/2) * y);
+	u32 pixel_new = (tmpfb[offset] & (x%2 ? 0xFFFF0000 : 0xFFFF)) | ( color   << (x%2 ? 0 : 16UL));
+	tmpfb[offset] = pixel_new;
 }
 
-/**************************************************************************/
-/*!
-   @brief    Write a pixel, overwrite in subclasses if startWrite is defined!
-    @param   x   x coordinate
-    @param   y   y coordinate
-   @param    color 32-bit Y1CbY2Cr
-*/
-/**************************************************************************/
-void writeNativePixel(int16_t x, int16_t y, int color) {
-	u32 *tmpfb = (u32 *)  __xfb;
-	tmpfb[x + rmode->fbWidth * y ] = color;
-}
 
 /**************************************************************************/
 /*!
@@ -657,8 +641,7 @@ void drawBitmap(int16_t x, int16_t y, const uint8_t bitmap[],
       else
         b = pgm_read_byte(&bitmap[j * byteWidth + i / 8]);
       if (b & 0x80) {
-    	  writePixel(x + i*2, y, color);
-      	  writePixel(x + i*2 + (x%2? -1 : 1), y, color);
+    	  writePixel(x + i, y, color);
       }
     }
   }

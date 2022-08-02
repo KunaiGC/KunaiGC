@@ -18,7 +18,7 @@ int screenheight;
 int vmode_60hz = 0;
 u32 retraceCount;
 
-#include "gfx/kunai_logo_half.h"
+#include "gfx/kunai_logo.h"
 #include "gfx/gfx.h"
 #include "spiflash/spiflash.h"
 #include "kunaigc/kunaigc.h"
@@ -219,10 +219,10 @@ void draw_menu(void){
 		int x = 50;
 		for(uint8_t i = 0; i < 10; i++) {
 
-			drawBitmap(640-250-25*i, i*x , image_data_Kunai_logo_half, 125, 81, getColor(25*i, 13*i, 7*i));
+			drawBitmap(640-250-25*i, i*x , image_data_KunaiGCLogo, 250, 81, 0);
 		}
 
-		drawString(50, 300,(unsigned char *) "KunaiGC!", getColor(255,255,255), getColor(255,255,255), 4,4);
+		drawString(50, 300,(unsigned char *) "KunaiGC Rockz!", getColor(255,255,255), getColor(255,255,255), 4,4);
 
 	while(1){
 		ShowScreen();
@@ -235,23 +235,25 @@ void draw_menu(void){
 				"\t\t seewood\n"
 				"\t\t derKevin\n\n");
 		kprintf("SPIFlash-DeviceID: 0x%X\n", kunai_get_deviceid());
-		kprintf("swiss-size: 0x%X\n", kunai_read_32bit(0x23004));
+//		kprintf("swiss-size: 0x%X\n", kunai_read_32bit(0x23004));
 
-		kprintf("Write test:");
+//		kprintf("Write test:");
 
-		uint32_t readout = kunai_read_32bit(0x80000);
-		kprintf("\tbefore: %08X", readout);
+//		uint32_t readout = kunai_read_32bit(0x80000);
+//		kprintf("\tbefore: %08X", readout);
 
-		kunai_write_32bit(0xdeadbeef, 0x80000);
+//		kunai_write_32bit(0xdeadbeef, 0x80000);
 
-		uint32_t readout2 = kunai_read_32bit(0x80000);
-		kprintf("\t after: %08X", readout2);
+//		uint32_t readout2 = kunai_read_32bit(0x80000);
+//		kprintf("\t after: %08X", readout2);
 
 
-		kprintf("\n%s Index 0", cursor_idx == 0 ? "*" : "");
-		kprintf("\n%s Index 1", cursor_idx == 1 ? "*" : "");
-		kprintf("\n%s Index 2", cursor_idx == 2 ? "*" : "");
-		kprintf("\n%s Index 3", cursor_idx == 3 ? "*" : "");
+		kprintf("\n%s Option 1", cursor_idx == 0 ? "*" : "");
+		kprintf("\n%s Option 2", cursor_idx == 1 ? "*" : "");
+		kprintf("\n%s Option 3", cursor_idx == 2 ? "*" : "");
+		kprintf("\n%s Option 4", cursor_idx == 3 ? "*" : "");
+
+		kprintf("\n\nPress 'B' to return.");
 
 
 		PAD_ScanPads();
@@ -272,6 +274,12 @@ void draw_menu(void){
 			while(PAD_ButtonsHeld(0) & PAD_BUTTON_UP) PAD_ScanPads();
 			cursor_idx--;
 			cursor_idx = MAX(cursor_idx, MIN_INDEX);
+		}
+
+		if (PAD_ButtonsHeld(0) & PAD_BUTTON_B){
+			while(PAD_ButtonsHeld(0) & PAD_BUTTON_UP) PAD_ScanPads();
+			ClearScreen();
+			break;
 		}
 
 
@@ -345,14 +353,35 @@ int main()
 	CON_Init(__xfb, 0, 0, rmode->fbWidth, rmode->xfbHeight, rmode->fbWidth * VI_DISPLAY_PIX_SZ);
 
 	kprintf("\n\nKunaiLoader - based on iplboot\n");
-	kprintf("rmode->fbWidth %u\n", rmode->fbWidth);
-	kprintf("rmode->xfbHeight: %u\n", rmode->xfbHeight);
-	kprintf("framebuffer: %lu\n", VIDEO_GetFrameBufferSize(rmode));
-	//(u32 *) fb = __xfb
-	((u32 *) __xfb)[0] = COLOR_SILVER;
-	((u32 *) __xfb)[319] = COLOR_SILVER;
-	((u32 *) __xfb)[479*320] = COLOR_SILVER;
-	((u32 *) __xfb)[479*320+319] = COLOR_SILVER;
+
+//	while(1) {
+
+//		kprintf("rmode->fbWidth %u\n", rmode->fbWidth);
+//		kprintf("rmode->xfbHeight: %u\n", rmode->xfbHeight);
+//		kprintf("framebuffer: %lu\n", VIDEO_GetFrameBufferSize(rmode));
+//		//(u32 *) fb = __xfb
+//
+//		kprintf("xfb[0]: %08X\n", ((u32 *) __xfb)[0]);
+//		for(u16 x = 0; x < 320; x+=4)
+//			for(u16 y = 0; y < 480; y+=4)
+//					writePixel(x*2+1, y, x+(y*320));
+//		writePixel(2, 0, getColor(255,0,0));
+//		writePixel(1, 0, (u16) COLOR_RED);
+//		((u32 *) __xfb)[0] = (u16) COLOR_RED | (COLOR_BLACK & 0xFFFF0000);
+//		((u32 *) __xfb)[319] = (u16) COLOR_SILVER | (COLOR_YELLOW & 0xFFFF0000);
+//		((u32 *) __xfb)[479*320] = (u16) COLOR_RED;// | (COLOR_YELLOW & 0xFFFF0000);
+//		((u32 *) __xfb)[479*320+319] = (u16) COLOR_SILVER | (COLOR_YELLOW & 0xFFFF0000);
+
+//		kprintf("xfb[0]: %08X\n", ((u32 *) __xfb)[0]);
+//
+//		VIDEO_WaitVSync();
+//		PAD_ScanPads();
+//	}
+
+//
+//	writePixel(639, 0, (u16) COLOR_RED);
+//	writePixel(0, 479, (u16) (0x515A));
+//	writePixel(639, 479, (u16) COLOR_RED);
 	// Disable Qoob
 	u32 val = 6 << 24;
 	u32 addr = 0xC0000000;
@@ -387,6 +416,10 @@ int main()
 	}
 
 	if (all_buttons_held & PAD_TRIGGER_Z) draw_menu();
+
+	CON_Init(__xfb, 0, 0, rmode->fbWidth, rmode->xfbHeight, rmode->fbWidth * VI_DISPLAY_PIX_SZ);
+
+	kprintf("\n\nKunaiLoader - based on iplboot\n");
 
 	if (load_usb('B')) goto load;
 

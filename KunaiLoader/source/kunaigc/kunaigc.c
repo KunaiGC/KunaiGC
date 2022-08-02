@@ -38,14 +38,14 @@ int kunai_load_payload(u32 addr, size_t size){
 }
 
 //wait for "WIP" flag being unset
-#define kunai_wait_M() ({					\
-		usleep(150000);						\
-		kunai_enable_passthrough();			\
-		spiflash_wait();					\
-		kunai_disable_passthrough();		\
-})
+void kunai_wait() {
+		usleep(150000);
+		kunai_enable_passthrough();
+		spiflash_wait();
+		kunai_disable_passthrough();
+}
 
-static inline void kunai_disable_passthrough(void) {
+void kunai_disable_passthrough(void) {
 	EXI_Deselect(EXI_CHANNEL_0);
 	EXI_Unlock(EXI_CHANNEL_0);
 //	usleep(75000);
@@ -90,7 +90,7 @@ void kunai_write_32bit(uint32_t data, uint32_t addr) {
 	spiflash_cmd_addr_start(W25Q80BV_CMD_PAGE_PROG, addr);
 	spiflash_write_uint32(data);
 	kunai_disable_passthrough();
-	kunai_wait_M();
+	kunai_wait();
 
 }
 
@@ -112,7 +112,7 @@ int8_t kunai_write_page(uint32_t * data, uint32_t addr, bool verify) {
 		EXI_Sync(EXI_CHANNEL_0);
 	}
 	kunai_disable_passthrough();
-	kunai_wait_M();
+	kunai_wait();
 	//verify
 	if(verify) {
 		uint32_t buff;
@@ -150,6 +150,6 @@ void kunai_sector_erase(uint32_t addr) {
 	kunai_enable_passthrough();
 	spiflash_cmd_addr_start(W25Q80BV_CMD_ERASE_4K, addr);
 	kunai_disable_passthrough();
-	kunai_wait_M();
+	kunai_wait();
 }
 

@@ -34,7 +34,7 @@ unsigned int getColor(u8 r1, u8 g1, u8 b1);
   // These MAY be overridden by the subclass to provide device-specific
   // optimized code.  Otherwise 'generic' versions are used.
   void startWrite(void);
-  void writePixel(int16_t x, int16_t y, int color);
+  void writePixel(int16_t x, int16_t y, u32 color);
   void writeNativePixel(int16_t x, int16_t y, int color);
   void writeFillRect(int16_t x, int16_t y, int16_t w, int16_t h,
                              int color);
