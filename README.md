@@ -12,7 +12,8 @@ It is a OpenSource IPL modchip for the Nintendo Gamecube which provides a rich f
 * KunaiRecovery
 * Cubeboot support
 
-upcoming: configurable boot-behavior
+* upcoming: configurable boot-behavior
+
 
 ## Guides and Wiki
 
