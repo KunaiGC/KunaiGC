@@ -23,7 +23,7 @@ It is a OpenSource IPL modchip for the Nintendo Gamecube which provides a rich f
 
 ## Installation
 
-* the QSB is pretty straight forward and you only need to solder a few given spots. Make sure to check [**the solder guide**](https://github.com/KunaiGC/KunaiGC/wiki/SolderKunaiGC)
+* the QSB is pretty straight forward and you only need to solder a few given spots. Make sure to check [**the solder guide**](https://github.com/KunaiGC/KunaiGC/wiki/Installation)
 
 ## You want to support our development?
 
