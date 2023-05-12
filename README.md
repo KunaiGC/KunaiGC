@@ -27,7 +27,7 @@ It is a OpenSource IPL modchip for the Nintendo Gamecube which provides a rich f
 
 ## You want to support our development?
 
-* head over to c4y and order your own KunaiGC - https://consoles4you.ch/kunaigc
+* head over to c4y and order your own KunaiGC - https://consoles4you.ch/en/kunaigc
 
 ## Credits
 * #gc-forever crew: [Extrems](https://github.com/Extrems), [emu_kidid](https://github.com/emukidid) for doing the best job on swiss and homebrew, [novenary](https://github.com/9ary) especially for gaving us the permission to make his [gc-ipl](https://github.com/redolution/gc-ipl) great again 
