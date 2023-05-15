@@ -56,22 +56,7 @@
           "width": 0.0
         }
       ],
-      "drc_exclusions": [
-        "copper_edge_clearance|151177045|28365937|027ef75a-fbe8-48b8-a8dc-fba7696b1463|0d1824c4-c551-4e68-a77f-12799b7dc0cb",
-        "copper_edge_clearance|151177045|28806937|559c6cdf-5651-4b0d-b954-cc5b3eb23545|b01a9df9-9374-4ff1-bf59-d993372db03f",
-        "copper_edge_clearance|151177045|31346937|559c6cdf-5651-4b0d-b954-cc5b3eb23545|b7b359ee-bf58-4775-a109-cb8b24d04e44",
-        "copper_edge_clearance|151177045|31346937|559c6cdf-5651-4b0d-b954-cc5b3eb23545|e8ca3c15-298e-4017-b1d7-db57c021fbac",
-        "copper_edge_clearance|151177045|33886937|559c6cdf-5651-4b0d-b954-cc5b3eb23545|4c864599-6a97-451b-865e-d4978f9e519f",
-        "copper_edge_clearance|151177045|33886937|559c6cdf-5651-4b0d-b954-cc5b3eb23545|7f1f4db5-1495-4bcb-bae2-42b20ab30cbf",
-        "copper_edge_clearance|151177045|36426937|559c6cdf-5651-4b0d-b954-cc5b3eb23545|0210d24e-2216-4817-9b33-72532075b820",
-        "copper_edge_clearance|151177045|36426937|559c6cdf-5651-4b0d-b954-cc5b3eb23545|42f56464-e95f-4b15-9ba9-21112181d7b6",
-        "copper_edge_clearance|151177045|38966937|559c6cdf-5651-4b0d-b954-cc5b3eb23545|a7bc7bfc-f5a6-4bcc-a861-f5fbc0541277",
-        "copper_edge_clearance|151177045|38966937|559c6cdf-5651-4b0d-b954-cc5b3eb23545|b602dc5f-9bfb-43d7-b7a8-84443afcd7d3",
-        "copper_edge_clearance|151177045|41506937|559c6cdf-5651-4b0d-b954-cc5b3eb23545|460517d1-6469-434c-8a16-a078f2b6bdd9",
-        "silk_over_copper|151177045|30076937|559c6cdf-5651-4b0d-b954-cc5b3eb23545|5a8f86ab-783b-43d1-bb59-6022adbf95bc",
-        "silk_over_copper|151477045|42836937|d3fed55b-cf85-4d9f-a439-eaf6f39922b2|58cffa28-9a76-45fe-b5c4-37558f4eaeeb",
-        "track_dangling|162911045|67608937|29bf8718-f4dd-424c-a5d3-bfa1a1c8d365|00000000-0000-0000-0000-000000000000"
-      ],
+      "drc_exclusions": [],
       "meta": {
         "version": 2
       },
@@ -522,7 +507,7 @@
       "workbook_filename": ""
     },
     "page_layout_descr_file": "",
-    "plot_directory": "",
+    "plot_directory": "media/",
     "spice_adjust_passive_values": false,
     "spice_current_sheet_as_root": false,
     "spice_external_command": "spice \"%I\"",

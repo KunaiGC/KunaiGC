@@ -35,8 +35,8 @@ head over to your favorite shop and order your own KunaiGC
 ## Credits
 * #gc-forever crew: [Extrems](https://github.com/Extrems), [emu_kidid](https://github.com/emukidid) for doing the best job on swiss and homebrew, [novenary](https://github.com/9ary) especially for gaving us the permission to make his [gc-ipl](https://github.com/redolution/gc-ipl) great again 
 * [tmbinc](https://github.com/tmbinc) - making ipl modchips possible
-* happy_bunny and [webhdx](https://github.com/webhdx) for there research on the [shuriken attack](https://www.retro-system.com/shuriken_attack.htm) and [PicoBoot](https://github.com/webhdx/PicoBoot)
-* Kunai beta testers from [CiBo](https://circuit-board.de/forum/), [psxtools.de](psxtools.de) and my man [EnterpriseFreak](https://github.com/EnterpriseFreak-v2) ;-)
+* happy_bunny and [webhdx](https://github.com/webhdx) for their research on the [shuriken attack](https://www.retro-system.com/shuriken_attack.htm) and [PicoBoot](https://github.com/webhdx/PicoBoot)
+* KunaiGC beta testers from [CiBo](https://circuit-board.de/forum/), [psxtools.de](psxtools.de) and [EnterpriseFreak](https://github.com/EnterpriseFreak-v2)
 * The handsome guys :p [Voultar](https://voultar.com/) and [MachoNacho](https://www.youtube.com/c/MachoNachoProductions)
 * everyone who supports us 
 
