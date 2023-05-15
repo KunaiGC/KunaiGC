@@ -43,6 +43,10 @@ void spiflash_read_start(uint32_t addr) {
 	spiflash_cmd_addr_start(W25Q80BV_CMD_READ_DATA, addr);
 }
 
+void spiflash_read_start_fast(uint32_t addr) {
+	spiflash_cmd_addr_start(W25Q80BV_CMD_READ_FAST, addr);
+	spiflash_read_uint8();
+}
 
 uint8_t spiflash_read_uint8(void) {
 	uint8_t val = 0;
@@ -133,6 +137,14 @@ uint16_t spiflash_device_id(void) {
 	return id;
 }
 
+uint32_t spiflash_jedec_id(void) {
+	uint32_t id;
+	uint8_t cmd = W25Q80BV_CMD_READ_JEDEC_ID;
+	EXI_Imm(EXI_CHANNEL_0, &cmd, 1, EXI_WRITE, NULL);
+	EXI_Sync(EXI_CHANNEL_0);
+	id = spiflash_read_uint32() >> 8;
+	return id;
+}
 
 uint64_t spiflash_unique_id(void) {
 	uint64_t id;

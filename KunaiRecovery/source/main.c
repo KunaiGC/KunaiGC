@@ -7,93 +7,29 @@
 #include <ogc/lwp_watchdog.h>
 #include <fcntl.h>
 #include <ogc/system.h>
-#include "ffshim.h"
+#include "etc/ffshim.h"
 #include "fatfs/ff.h"
 
-#include "stub.h"
+#include "etc/stub.h"
 #define STUB_ADDR  0x80001000
 #define STUB_STACK 0x80003000
 
+int screenheight;
+int vmode_60hz = 0;
+u32 retraceCount;
+
+#include "gfx/kunai_logo.h"
+#include "gfx/gfx.h"
+#include "spiflash/spiflash.h"
+#include "kunaigc/kunaigc.h"
+#define KUNAI_VERSION "1.0"
+
 u8 *dol = NULL;
-size_t dol_size = 0;
-//u8 *ipl = NULL;
-char *path = "/KUNAIGC/recovery.dol";
+char *path = "KUNAIGC/recovery.dol";
 
-#define POLYNOMIAL 0x1021  /* 11011 followed by 0's */
-#define INITIAL_REMAINDER 0x1D0F
-/*
- * The width of the CRC calculation and result.
- * Modify the typedef for a 16 or 32-bit CRC standard.
- */
-typedef uint16_t crc;
-
-crc ipl_crc = 0;
-
-#define WIDTH  (8 * sizeof(crc))
-#define TOPBIT (1 << (WIDTH - 1))
-crc  crcTable[256];
-
-void crcInit(void)
-{
-    crc  remainder;
-
-
-    /*
-     * Compute the remainder of each possible dividend.
-     */
-    for (int dividend = 0; dividend < 256; ++dividend)
-    {
-        /*
-         * Start with the dividend followed by zeros.
-         */
-        remainder = dividend << (WIDTH - 8);
-
-        /*
-         * Perform modulo-2 division, a bit at a time.
-         */
-        for (uint8_t bit = 8; bit > 0; --bit)
-        {
-            /*
-             * Try to divide the current data bit.
-             */
-            if (remainder & TOPBIT)
-            {
-                remainder = (remainder << 1) ^ POLYNOMIAL;
-            }
-            else
-            {
-                remainder = (remainder << 1);
-            }
-        }
-
-        /*
-         * Store the result into the table.
-         */
-        crcTable[dividend] = remainder;
-    }
-
-}   /* crcInit() */
-
-crc crcFast(uint8_t const message[], int nBytes)
-{
-    uint8_t data;
-    crc remainder = INITIAL_REMAINDER;
-
-    /*
-     * Divide the message by the polynomial, a byte at a time.
-     */
-    for (int byte = 0; byte < nBytes; ++byte)
-    {
-        data = message[byte] ^ (remainder >> (WIDTH - 8));
-        remainder = crcTable[data] ^ (remainder << 8);
-    }
-
-    /*
-     * The final remainder is the CRC.
-     */
-    return (remainder);
-
-}   /* crcFast() */
+extern lfs_t lfs;
+extern lfs_file_t lfs_file;
+extern struct lfs_config cfg;
 
 void dol_alloc(int size)
 {
@@ -115,27 +51,6 @@ void dol_alloc(int size)
         kprintf("Couldn't allocate memory\n");
     }
 }
-
-//void ipl_alloc(int size)
-//{
-//    int mram_size = (SYS_GetArenaHi() - SYS_GetArenaLo());
-//    kprintf("Memory available: %iB\n", mram_size);
-//
-//    kprintf("IPL size is %iB\n", size);
-//
-//    if (size <= 0)
-//    {
-//        kprintf("Empty IPL\n");
-//        return;
-//    }
-//
-//    ipl = (u8 *) memalign(32, size);
-//
-//    if (!ipl)
-//    {
-//        kprintf("Couldn't allocate memory\n");
-//    }
-//}
 
 int load_fat(const char *slot_name, const DISC_INTERFACE *iface_)
 {
@@ -165,15 +80,15 @@ int load_fat(const char *slot_name, const DISC_INTERFACE *iface_)
         goto unmount;
     }
 
-    dol_size = f_size(&file);
-    dol_alloc(dol_size);
+    size_t size = f_size(&file);
+    dol_alloc(size);
     if (!dol)
     {
         res = 0;
         goto unmount;
     }
     UINT _;
-    f_read(&file, dol, dol_size, &_);
+    f_read(&file, dol, size, &_);
     f_close(&file);
 
 unmount:
@@ -185,150 +100,264 @@ end:
     return res;
 }
 
+unsigned int convert_int(unsigned int in)
+{
+    unsigned int out;
+    char *p_in = (char *) &in;
+    char *p_out = (char *) &out;
+    p_out[0] = p_in[3];
+    p_out[1] = p_in[2];
+    p_out[2] = p_in[1];
+    p_out[3] = p_in[0];
+    return out;
+}
+
 #define PC_READY 0x80
 #define PC_OK    0x81
 #define GC_READY 0x88
 #define GC_OK    0x89
 
-extern u8 __xfb[];
+int load_usb(char slot)
+{
+    kprintf("Trying USB Gecko in slot %c\n", slot);
 
-#define KUNAI_LOADER_SIZE_ADDR 	0x023000UL
-#define KUNAI_LOADER_ADDR 		0x024000UL	//max. recovery payload size: 141.280 bytes (147.456 - 6176)
+    int channel, res = 1;
 
-int kunai_load_internal(void){
-	kprintf("Trying loading from internal Memory\n\n");
-	int res = 1;
-	u32 addr = (KUNAI_LOADER_ADDR << 6); //convert address to EXI scheme
-	u32 size_addr = (KUNAI_LOADER_SIZE_ADDR << 6); //convert address to EXI scheme
+    switch (slot)
+    {
+    case 'B':
+        channel = 1;
+        break;
 
-	EXI_Lock(EXI_CHANNEL_0, EXI_DEVICE_1, NULL);
-	EXI_Select(EXI_CHANNEL_0, EXI_DEVICE_1, EXI_SPEED16MHZ);
-	EXI_Imm(EXI_CHANNEL_0, &size_addr, 4, EXI_WRITE, NULL);
-	EXI_Sync(EXI_CHANNEL_0);
-	EXI_Imm(EXI_CHANNEL_0, &dol_size, 4, EXI_READ, NULL);
-	EXI_Sync(EXI_CHANNEL_0);
-	EXI_Imm(EXI_CHANNEL_0, &ipl_crc, 2, EXI_READ, NULL);
-	EXI_Sync(EXI_CHANNEL_0);
+    case 'A':
+    default:
+        channel = 0;
+        break;
+    }
 
-	dol_alloc(dol_size);
-	if(!dol)
-	{
-		res = 0;
-		goto end;
-	}
+    if (!usb_isgeckoalive(channel))
+    {
+        kprintf("Not present\n");
+        res = 0;
+        goto end;
+    }
 
-	EXI_Deselect(EXI_CHANNEL_0);
-	EXI_Unlock(EXI_CHANNEL_0);
+    usb_flush(channel);
 
-	EXI_Lock(EXI_CHANNEL_0, EXI_DEVICE_1, NULL);
-	EXI_Select(EXI_CHANNEL_0, EXI_DEVICE_1, EXI_SPEED16MHZ);
-	EXI_Imm(EXI_CHANNEL_0, &addr, 4, EXI_WRITE, NULL);
-	EXI_Sync(EXI_CHANNEL_0);
+    char data;
 
-	kprintf("Receiving file...\n");
-	u32 * pointer = (u32 *) dol;
-	u16 loops = (dol_size + 2) / 4;
-	while(loops--){
-		EXI_Imm(EXI_CHANNEL_0, pointer++, 4, EXI_READ, NULL);
-		EXI_Sync(EXI_CHANNEL_0);
-	}
+    kprintf("Sending ready\n");
+    data = GC_READY;
+    usb_sendbuffer_safe(channel, &data, 1);
+
+    kprintf("Waiting for ack...\n");
+    while ((data != PC_READY) && (data != PC_OK))
+        usb_recvbuffer_safe(channel, &data, 1);
+
+    if(data == PC_READY)
+    {
+        kprintf("Respond with OK\n");
+        // Sometimes the PC can fail to receive the byte, this helps
+        usleep(100000);
+        data = GC_OK;
+        usb_sendbuffer_safe(channel, &data, 1);
+    }
+
+    kprintf("Getting DOL size\n");
+    int size;
+    usb_recvbuffer_safe(channel, &size, 4);
+    size = convert_int(size);
+
+    dol_alloc(size);
+    unsigned char* pointer = dol;
+
+    if(!dol)
+    {
+        res = 0;
+        goto end;
+    }
+
+    kprintf("Receiving file...\n");
+    while (size > 0xF7D8)
+    {
+        usb_recvbuffer_safe(channel, (void *) pointer, 0xF7D8);
+        size -= 0xF7D8;
+        pointer += 0xF7D8;
+    }
+    if(size)
+        usb_recvbuffer_safe(channel, (void *) pointer, size);
 
 end:
-	EXI_Deselect(EXI_CHANNEL_0);
-	EXI_Unlock(EXI_CHANNEL_0);
-
-	crcInit();
-	crc dol_crc = crcFast(dol, (int) dol_size);
-	if(ipl_crc != dol_crc) {
-		kprintf("CRC-check failed!\n");
-		kprintf("\texpected   crc: %04X\n", ipl_crc);
-		kprintf("\tcalculated crc: %04X\n", dol_crc);
-		dol = NULL;
-		res = 0;
-	}
-
-	return res;
+    return res;
 }
 
-void kunai_disable(void) {
-	u32 addr = 0xFFFFFFFF; //disable the KunaiGC by sending only '1' to the Bus
-	EXI_Lock(EXI_CHANNEL_0, EXI_DEVICE_1, NULL);
-	EXI_Select(EXI_CHANNEL_0, EXI_DEVICE_1, EXI_SPEED8MHZ);
-	EXI_Imm(EXI_CHANNEL_0, &addr, 4, EXI_WRITE, NULL);
-	EXI_Sync(EXI_CHANNEL_0);
-	EXI_Deselect(EXI_CHANNEL_0);
-	EXI_Unlock(EXI_CHANNEL_0);
+int load_lfs(const char * filePath)
+{
+    int res = 1;
+
+    kprintf("Trying lfs\n");
+
+    //update block_count regarding to flash chip
+    u32 jedec_id = kunai_get_jedecID();
+    cfg.block_count = (((1 << (jedec_id & 0xFFUL)) - KUNAI_OFFS) / cfg.block_size);
+
+	int err = lfs_mount(&lfs, &cfg);
+
+    if (err != LFS_ERR_OK)
+    {
+        kprintf("Couldn't mount lfs\n");
+        res = 0;
+        goto end;
+    }
+
+    kprintf("lfs mounted\n");
+
+    kprintf("Reading %s\n", filePath);
+    if (lfs_file_open(&lfs, &lfs_file, filePath, LFS_O_RDWR) != LFS_ERR_OK)
+    {
+        kprintf("Failed to open file\n");
+        res = 0;
+        goto unmount;
+    }
+
+    size_t size = lfs_file_size(&lfs, &lfs_file);
+    dol_alloc(size);
+    if (!dol)
+    {
+        res = 0;
+        goto unmount;
+    }
+    lfs_file_read(&lfs, &lfs_file, dol, size);
+    lfs_file_close(&lfs, &lfs_file);
+unmount:
+    kprintf("Unmounting lfs\n");
+    lfs_unmount(&lfs);
+end:
+    return res;
 }
+
+GXRModeObj *rmode = NULL;
 
 int main()
 {
 	VIDEO_Init ();		/*** ALWAYS CALL FIRST IN ANY LIBOGC PROJECT!
-						     Not only does it initialise the video
-						     subsystem, but also sets up the ogc os ***/
+					     Not only does it initialise the video
+					     subsystem, but also sets up the ogc os
+	 ***/
 
-		PAD_Init ();			/*** Initialise pads for input ***/
-		// get default video mode
-		GXRModeObj *rmode = VIDEO_GetPreferredMode(NULL);
+	PAD_Init ();			/*** Initialise pads for input ***/
 
-		switch (rmode->viTVMode >> 2)
-		{
-		case VI_PAL:
-			// 576 lines (PAL 50Hz)
-			// display should be centered vertically (borders)
-			//Make all video modes the same size so menus doesn't screw up
-			rmode = &TVPal576IntDfScale;
-			rmode->xfbHeight = 480;
-			rmode->viYOrigin = (VI_MAX_HEIGHT_PAL - 480)/2;
-			rmode->viHeight = 480;
-			break;
-		default:
-			break;
-		}
+	// get default video mode
+	rmode = VIDEO_GetPreferredMode(NULL);
 
-		if(VIDEO_HaveComponentCable()) rmode = &TVNtsc480Prog;
-		VIDEO_Configure (rmode);
-		VIDEO_ClearFrameBuffer (rmode, __xfb, COLOR_BLACK);
-		VIDEO_SetNextFramebuffer (__xfb);
-		VIDEO_SetBlack (0);
-		VIDEO_Flush ();
-
-		VIDEO_WaitVSync ();		/*** Wait for VBL ***/
-		if (rmode->viTVMode & VI_NON_INTERLACE)
-			VIDEO_WaitVSync ();
-    CON_Init(__xfb, 0, 0, rmode->fbWidth, rmode->xfbHeight, rmode->fbWidth * VI_DISPLAY_PIX_SZ);
-
-    PAD_ScanPads();
-
-    kprintf("\n\nKunaiRecovery - based on IPLboot\n");
-
-    //only scan for recovery file if 'Z' is held
-    if(PAD_ButtonsHeld(PAD_CHAN0) & PAD_TRIGGER_Z) {
-
-    	if (load_fat("sdb", &__io_gcsdb)) goto load;
-
-    	if (load_fat("sda", &__io_gcsda)) goto load;
-
-    	if (load_fat("sd2", &__io_gcsd2)) goto load;
-    }
-
-    if (kunai_load_internal()) goto load;
-
-//    u16 err_ptr = 0;
-//    for(u16 i = 0; i < 0x7020; i++) {
-//    	if(((u32 *) ipl)[i] != ((u32 *) dol)[i]) {
-//    		err_ptr = i;
-//    		break;
-//    	}
-//    }
+	switch (rmode->viTVMode >> 2)
+	{
+	case VI_PAL:
+		// 576 lines (PAL 50Hz)
+		// display should be centered vertically (borders)
+		//Make all video modes the same size so menus doesn't screw up
+		rmode = &TVPal576IntDfScale;
+		rmode->xfbHeight = 480;
+		rmode->viYOrigin = (VI_MAX_HEIGHT_PAL - 480)/2;
+		rmode->viHeight = 480;
 
 
-load:
+		vmode_60hz = 0;
+		break;
+
+	case VI_NTSC:
+		// 480 lines (NTSC 60hz)
+		vmode_60hz = 1;
+		break;
+
+	default:
+		// 480 lines (PAL 60Hz)
+		vmode_60hz = 1;
+		break;
+	}
+
+	/* we have component cables, but the preferred mode is interlaced
+	 * why don't we switch into progressive?
+	 * (user may not have progressive compatible display but component input)*/
+	if(VIDEO_HaveComponentCable()) rmode = &TVNtsc480Prog;
+	// configure VI
+	VIDEO_Configure (rmode);
+
+	/*** Clear framebuffer to black ***/
+	VIDEO_ClearFrameBuffer (rmode, __xfb, COLOR_BLACK);
+
+	/*** Set the framebuffer to be displayed at next VBlank ***/
+	VIDEO_SetNextFramebuffer (__xfb);
+
+	/*** Get the PAD status updated by libogc ***/
+	//		VIDEO_SetPostRetraceCallback (updatePAD);
+	VIDEO_SetBlack (0);
+
+	/*** Update the video for next vblank ***/
+	VIDEO_Flush ();
+
+	VIDEO_WaitVSync ();		/*** Wait for VBL ***/
+	if (rmode->viTVMode & VI_NON_INTERLACE)
+		VIDEO_WaitVSync ();
+
+	CON_Init(__xfb, 0, 0, rmode->fbWidth, rmode->xfbHeight, rmode->fbWidth * VI_DISPLAY_PIX_SZ);
+
+	kprintf("\n\nKunaiRecovery - based on iplboot\n");
+
+	// Disable Qoob/KunaiGC
+	u32 val = 6 << 24;
+	u32 addr = 0xC0000000;
+	EXI_Lock(EXI_CHANNEL_0, EXI_DEVICE_1, NULL);
+	EXI_Select(EXI_CHANNEL_0, EXI_DEVICE_1, EXI_SPEED8MHZ);
+	EXI_Imm(EXI_CHANNEL_0, &addr, 4, EXI_WRITE, NULL);
+	EXI_Sync(EXI_CHANNEL_0);
+	EXI_Imm(EXI_CHANNEL_0, &val, 4, EXI_WRITE, NULL);
+	EXI_Sync(EXI_CHANNEL_0);
+	EXI_Deselect(EXI_CHANNEL_0);
+	EXI_Unlock(EXI_CHANNEL_0);
+
+	// Set the timebase properly for games
+	// Note: fuck libogc and dkppc
+	u32 t = ticks_to_secs(SYS_Time());
+	settime(secs_to_ticks(t));
 
 	PAD_ScanPads();
-	while (PAD_ButtonsHeld(PAD_CHAN0) & PAD_BUTTON_DOWN)
+
+	u16 all_buttons_held = (
+			PAD_ButtonsHeld(PAD_CHAN0) |
+			PAD_ButtonsHeld(PAD_CHAN1) |
+			PAD_ButtonsHeld(PAD_CHAN2) |
+			PAD_ButtonsHeld(PAD_CHAN3)
+	);
+
+
+	if (all_buttons_held & PAD_TRIGGER_Z) {
+
+		if (load_usb('B')) goto load;
+
+		if (load_fat("sdb", &__io_gcsdb)) goto load;
+
+		if (load_usb('A')) goto load;
+
+		if (load_fat("sda", &__io_gcsda)) goto load;
+
+		if (load_fat("sd2", &__io_gcsd2)) goto load;
+	}
+
+	if (load_lfs("KunaiLoader.dol")) goto load;
+
+	load:
+	// Wait to exit while the d-pad down direction is held.
+	while ((all_buttons_held & PAD_BUTTON_DOWN))
 	{
 		VIDEO_WaitVSync();
 		PAD_ScanPads();
+		all_buttons_held = (
+				PAD_ButtonsHeld(PAD_CHAN0) |
+				PAD_ButtonsHeld(PAD_CHAN1) |
+				PAD_ButtonsHeld(PAD_CHAN2) |
+				PAD_ButtonsHeld(PAD_CHAN3)
+		);
 	}
 
 	if (dol)
@@ -341,9 +370,7 @@ load:
 				(intptr_t) NULL, 0,
 				STUB_ADDR, STUB_STACK);
 	}
-
-    kunai_disable();
-    // If we reach here, all attempts to load a DOL failed
-    // Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
-    return 0;
+	// If we reach here, all attempts to load a DOL failed
+	// Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
+	return 0;
 }

@@ -11,7 +11,7 @@ ifeq ($(strip $(DEVKITPPC)),)
 $(error "Please set DEVKITPPC in your environment. export DEVKITPPC=<path to>devkitPPC")
 endif
 
-include $(DEVKITPPC)/gamecube_rules
+include $(DEVKITPPC)/gamecube_rules2
 
 #---------------------------------------------------------------------------------
 # TARGET is the name of the output
@@ -21,7 +21,7 @@ include $(DEVKITPPC)/gamecube_rules
 #---------------------------------------------------------------------------------
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
-SOURCES		:=	source source/fatfs
+SOURCES		:=	source source/fatfs source/etc source/kunaigc source/spiflash source/gfx source/lfs
 DATA		:=	data
 INCLUDES	:=
 

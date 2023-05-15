@@ -27,6 +27,10 @@ u32 retraceCount;
 u8 *dol = NULL;
 char *path = "/KUNAIGC/ipl.dol";
 
+extern lfs_t lfs;
+extern lfs_file_t lfs_file;
+extern struct lfs_config cfg;
+
 struct shortcut {
   u16 pad_buttons;
   char *path;
@@ -35,8 +39,6 @@ struct shortcut {
   {PAD_BUTTON_B,     "/b.dol"    },
   {PAD_BUTTON_X,     "/x.dol"    },
   {PAD_BUTTON_Y,     "/y.dol"    },
-  {PAD_TRIGGER_Z,    "/z.dol"    },
-  {PAD_BUTTON_START, "/start.dol"},
   {PAD_BUTTON_LEFT,  "/left.dol" },
   {PAD_BUTTON_RIGHT, "/right.dol"},
   {PAD_BUTTON_UP,    "/up.dol"   },
@@ -210,6 +212,33 @@ extern u8 __xfb[];
 #define MIN_INDEX 0
 #define MAX_INDEX 3
 void draw_menu(void){
+	u32 jedec_id = kunai_get_jedecID();
+	cfg.block_count = (((1 << (jedec_id & 0xFFUL)) - KUNAI_OFFS) / cfg.block_size);
+
+	int err = lfs_mount(&lfs, &cfg);
+
+	// reformat if we can't mount the filesystem
+	// this should only happen on the first boot
+	if (err) {
+		lfs_format(&lfs, &cfg);
+		lfs_mount(&lfs, &cfg);
+	}
+	// read current count
+	uint32_t boot_count = 0;
+	lfs_file_open(&lfs, &lfs_file, "boot_count", LFS_O_RDWR | LFS_O_CREAT);
+	lfs_file_read(&lfs, &lfs_file, &boot_count, sizeof(boot_count));
+
+    // update boot count
+    boot_count += 1;
+    lfs_file_rewind(&lfs, &lfs_file);
+    lfs_file_write(&lfs, &lfs_file, &boot_count, sizeof(boot_count));
+
+    // remember the storage is not updated until the file is closed successfully
+    lfs_file_close(&lfs, &lfs_file);
+
+    // release any resources we were using
+    lfs_unmount(&lfs);
+
 	int8_t cursor_idx = 0;
 		ClearScreen();
 
@@ -234,27 +263,16 @@ void draw_menu(void){
 		kprintf("\tBy\t ManCloud\n"
 				"\t\t seewood\n"
 				"\t\t derKevin\n\n");
-		kprintf("SPIFlash-DeviceID: 0x%X\n", kunai_get_deviceid());
-//		kprintf("swiss-size: 0x%X\n", kunai_read_32bit(0x23004));
+		kprintf("SPIFlash-JEDEC ID: 0x%06X\n", kunai_get_jedecID());
 
-//		kprintf("Write test:");
-
-//		uint32_t readout = kunai_read_32bit(0x80000);
-//		kprintf("\tbefore: %08X", readout);
-
-//		kunai_write_32bit(0xdeadbeef, 0x80000);
-
-//		uint32_t readout2 = kunai_read_32bit(0x80000);
-//		kprintf("\t after: %08X", readout2);
-
-
-		kprintf("\n%s Option 1", cursor_idx == 0 ? "*" : "");
-		kprintf("\n%s Option 2", cursor_idx == 1 ? "*" : "");
-		kprintf("\n%s Option 3", cursor_idx == 2 ? "*" : "");
-		kprintf("\n%s Option 4", cursor_idx == 3 ? "*" : "");
+		kprintf("\n%s Deactivate KunaiGC", cursor_idx == 0 ? "*" : "");
+		kprintf("\n%s Reactivate KunaiGC", cursor_idx == 1 ? "*" : "");
+		kprintf("\n%s Enable Passthrough", cursor_idx == 2 ? "*" : "");
+		kprintf("\n%s Disable Passthrough", cursor_idx == 3 ? "*" : "");
 
 		kprintf("\n\nPress 'B' to return.");
 
+		kprintf("\n\nKunaiGC Menu Boot Count: %u", boot_count);
 
 		PAD_ScanPads();
 		u16 currBtns = PAD_ButtonsHeld(0);
@@ -262,6 +280,17 @@ void draw_menu(void){
 		while(currBtns == PAD_ButtonsHeld(0)) {
 			PAD_ScanPads();
 			VIDEO_WaitVSync();
+		}
+
+		if(PAD_ButtonsHeld(0) & PAD_BUTTON_A) {
+			while(PAD_ButtonsHeld(0) & PAD_BUTTON_A) PAD_ScanPads();
+			switch (cursor_idx) {
+			case 0: kunai_disable(); break;
+			case 1: kunai_reenable(); break;
+			case 2: kunai_enable_passthrough(); break;
+			case 3: kunai_disable_passthrough(); break;
+			default: break;
+			}
 		}
 
 		if (PAD_ButtonsHeld(0) & PAD_BUTTON_DOWN){
@@ -286,10 +315,56 @@ void draw_menu(void){
 	}
 }
 
+int load_lfs(const char * filePath)
+{
+    int res = 1;
+
+    kprintf("Trying lfs\n");
+
+    //update block_count regarding to flash chip
+    u32 jedec_id = kunai_get_jedecID();
+    cfg.block_count = (((1 << (jedec_id & 0xFFUL)) - KUNAI_OFFS) / cfg.block_size);
+
+	int err = lfs_mount(&lfs, &cfg);
+
+    if (err != LFS_ERR_OK)
+    {
+        kprintf("Couldn't mount lfs\n");
+        res = 0;
+        goto end;
+    }
+
+    kprintf("lfs mounted\n");
+
+    kprintf("Reading %s\n", filePath);
+    if (lfs_file_open(&lfs, &lfs_file, filePath, LFS_O_RDWR) != LFS_ERR_OK)
+    {
+        kprintf("Failed to open file\n");
+        res = 0;
+        goto unmount;
+    }
+
+    size_t size = lfs_file_size(&lfs, &lfs_file);
+    dol_alloc(size);
+    if (!dol)
+    {
+        res = 0;
+        goto unmount;
+    }
+    lfs_file_read(&lfs, &lfs_file, dol, size);
+    lfs_file_close(&lfs, &lfs_file);
+unmount:
+    kprintf("Unmounting lfs\n");
+    lfs_unmount(&lfs);
+end:
+    return res;
+}
+
 GXRModeObj *rmode = NULL;
 
 int main()
 {
+main_start:
 	VIDEO_Init ();		/*** ALWAYS CALL FIRST IN ANY LIBOGC PROJECT!
 					     Not only does it initialise the video
 					     subsystem, but also sets up the ogc os
@@ -354,45 +429,7 @@ int main()
 
 	kprintf("\n\nKunaiLoader - based on iplboot\n");
 
-//	while(1) {
-
-//		kprintf("rmode->fbWidth %u\n", rmode->fbWidth);
-//		kprintf("rmode->xfbHeight: %u\n", rmode->xfbHeight);
-//		kprintf("framebuffer: %lu\n", VIDEO_GetFrameBufferSize(rmode));
-//		//(u32 *) fb = __xfb
-//
-//		kprintf("xfb[0]: %08X\n", ((u32 *) __xfb)[0]);
-//		for(u16 x = 0; x < 320; x+=4)
-//			for(u16 y = 0; y < 480; y+=4)
-//					writePixel(x*2+1, y, x+(y*320));
-//		writePixel(2, 0, getColor(255,0,0));
-//		writePixel(1, 0, (u16) COLOR_RED);
-//		((u32 *) __xfb)[0] = (u16) COLOR_RED | (COLOR_BLACK & 0xFFFF0000);
-//		((u32 *) __xfb)[319] = (u16) COLOR_SILVER | (COLOR_YELLOW & 0xFFFF0000);
-//		((u32 *) __xfb)[479*320] = (u16) COLOR_RED;// | (COLOR_YELLOW & 0xFFFF0000);
-//		((u32 *) __xfb)[479*320+319] = (u16) COLOR_SILVER | (COLOR_YELLOW & 0xFFFF0000);
-
-//		kprintf("xfb[0]: %08X\n", ((u32 *) __xfb)[0]);
-//
-//		VIDEO_WaitVSync();
-//		PAD_ScanPads();
-//	}
-
-//
-//	writePixel(639, 0, (u16) COLOR_RED);
-//	writePixel(0, 479, (u16) (0x515A));
-//	writePixel(639, 479, (u16) COLOR_RED);
-	// Disable Qoob
-	u32 val = 6 << 24;
-	u32 addr = 0xC0000000;
-	EXI_Lock(EXI_CHANNEL_0, EXI_DEVICE_1, NULL);
-	EXI_Select(EXI_CHANNEL_0, EXI_DEVICE_1, EXI_SPEED8MHZ);
-	EXI_Imm(EXI_CHANNEL_0, &addr, 4, EXI_WRITE, NULL);
-	EXI_Sync(EXI_CHANNEL_0);
-	EXI_Imm(EXI_CHANNEL_0, &val, 4, EXI_WRITE, NULL);
-	EXI_Sync(EXI_CHANNEL_0);
-	EXI_Deselect(EXI_CHANNEL_0);
-	EXI_Unlock(EXI_CHANNEL_0);
+	kunai_disable();
 
 	// Set the timebase properly for games
 	// Note: fuck libogc and dkppc
@@ -408,6 +445,24 @@ int main()
 			PAD_ButtonsHeld(PAD_CHAN3)
 	);
 
+
+	if (all_buttons_held & PAD_TRIGGER_Z) {
+		draw_menu();
+		while(all_buttons_held) {
+
+			PAD_ScanPads();
+
+			all_buttons_held = (
+					PAD_ButtonsHeld(PAD_CHAN0) |
+					PAD_ButtonsHeld(PAD_CHAN1) |
+					PAD_ButtonsHeld(PAD_CHAN2) |
+					PAD_ButtonsHeld(PAD_CHAN3)
+			);
+		};
+		goto main_start;
+
+	}
+
 	for (int i = 0; i < num_shortcuts; i++) {
 		if (all_buttons_held & shortcuts[i].pad_buttons) {
 			path = shortcuts[i].path;
@@ -415,11 +470,13 @@ int main()
 		}
 	}
 
-	if (all_buttons_held & PAD_TRIGGER_Z) draw_menu();
-
 	CON_Init(__xfb, 0, 0, rmode->fbWidth, rmode->xfbHeight, rmode->fbWidth * VI_DISPLAY_PIX_SZ);
 
 	kprintf("\n\nKunaiLoader - based on iplboot\n");
+
+	if (all_buttons_held & PAD_BUTTON_START) {
+		if (load_lfs("swiss.dol")) goto load;
+	}
 
 	if (load_usb('B')) goto load;
 
@@ -455,8 +512,6 @@ int main()
 				(intptr_t) NULL, 0,
 				STUB_ADDR, STUB_STACK);
 	}
-
-	kunai_disable();
 	// If we reach here, all attempts to load a DOL failed
 	// Since we've disabled the Qoob, we wil reboot to the Nintendo IPL
 	return 0;
