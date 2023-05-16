@@ -40,4 +40,6 @@ head over to your favorite shop and order your own KunaiGC
 * The handsome guys :p [Voultar](https://voultar.com/) and [MachoNacho](https://www.youtube.com/c/MachoNachoProductions)
 * everyone who supports us 
 
-
+## Licence 
+ * The Hardware was developed under CC BY-NC-SA (Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International)
+ * The Software was developed under GNU GPL 2 (GNU GENERAL PUBLIC LICENSE 2)
