@@ -28,9 +28,10 @@ It is a OpenSource IPL modchip for the Nintendo Gamecube which provides a rich f
 ## You want to support our development?
 
 head over to your favorite shop and order your own KunaiGC
-* consoles4you: https://consoles4you.ch/en/kunaigc-mod-chip
-* castlemaniagames: https://castlemaniagames.com/products/kunaigc-mod-chip
-* mod in france: https://shop.modinfrance.fr/en/gamecube/60-kunaigc-for-gamecube.html
+* [Swiss] consoles4you: https://consoles4you.ch/en/kunaigc-mod-chip
+* [US] castlemaniagames: https://castlemaniagames.com/products/kunaigc-mod-chip
+* [France] mod in france: https://shop.modinfrance.fr/en/gamecube/60-kunaigc-for-gamecube.html
+* [UK] retro upgrades: https://www.retroupgrades.co.uk/product/kunaigc-modchip/
 
 
 ## Credits
