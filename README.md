@@ -8,10 +8,10 @@ It is a OpenSource IPL modchip for the Nintendo Gamecube which provides a rich f
 * QSB - Quick Solder Board for easy installation process
 * Flash storage - boot directly into Swiss
 * Button mapped .dol file loading
-* Boot discs from all regions via build-in swiss 
+* Boot discs from all regions via build-in swiss
+* KunaiUpdater - Update build-in Swiss and Firmware via SD-Card
 * KunaiRecovery
 * Cubeboot support
-
 * upcoming: configurable boot-behavior
 
 
@@ -29,7 +29,7 @@ It is a OpenSource IPL modchip for the Nintendo Gamecube which provides a rich f
 
 head over to your favorite shop and order your own KunaiGC
 * [Swiss] consoles4you: https://consoles4you.ch/en/kunaigc-mod-chip
-* [US] castlemaniagames: https://castlemaniagames.com/products/kunaigc-mod-chip
+* [US] stoneagegamer: https://stoneagegamer.com/kunaigc.html
 * [France] mod in france: https://shop.modinfrance.fr/en/gamecube/60-kunaigc-for-gamecube.html
 * [UK] retro upgrades: https://www.retroupgrades.co.uk/product/kunaigc-modchip/
 
