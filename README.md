@@ -6,13 +6,13 @@ It is a OpenSource IPL modchip for the Nintendo Gamecube which provides a rich f
 
 ## Features
 * QSB - Quick Solder Board for easy installation process
-* Flash storage - boot directly into Swiss
-* Button mapped .dol file loading
+* Flash storage - boot directly into Swiss or GBI
+* configurable boot-behavior
+* Button mapped .dol file loading 
 * Boot discs from all regions via build-in swiss
-* KunaiUpdater - Update build-in Swiss and Firmware via SD-Card
+* KunaiUpdater - Update/Install Firmware, internal Swiss and GBI (Game Boy Interface) via SD-Card
 * KunaiRecovery
 * Cubeboot support
-* upcoming: configurable boot-behavior
 
 
 ## Guides and Wiki
@@ -26,7 +26,7 @@ It is a OpenSource IPL modchip for the Nintendo Gamecube which provides a rich f
 * The QSB is pretty straight forward and you only need to solder a few given spots. Make sure to check [**the solder guide**](https://github.com/KunaiGC/KunaiGC/wiki/Installation)
 
 ## Update the KunaiGC
-* To update the internal swiss version and the KunaiGC firmware please follow the [KunaiUpdater guide](https://github.com/KunaiGC/KunaiGC/wiki/Update-the-KunaiGC)
+* To update the KunaiGC firmware, the internal swiss version or install gbi (Game Boy Interface) please follow the [update instructions](https://github.com/KunaiGC/KunaiGC/wiki/Update-the-KunaiGC)
 
 ## You want to support our development?
 
