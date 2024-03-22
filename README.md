@@ -6,7 +6,7 @@ It is a OpenSource IPL modchip for the Nintendo Gamecube which provides a rich f
 
 ## Features
 * QSB - Quick Solder Board for easy installation process
-* Flash storage - boot directly into Swiss or GBI
+* Flash storage - boot directly into internal Swiss or GBI (Game Boy Interface)
 * configurable boot-behavior
 * Button mapped .dol file loading 
 * Boot discs from all regions via build-in swiss
